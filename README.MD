@@ -91,9 +91,5 @@ const router = Router({
 ## 单元测试
 
 ```sh
-npm run js-compile-unit-test-watch
-```
-
-```sh
 npm run test
 ```
