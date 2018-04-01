@@ -64,7 +64,7 @@ export default class MVVM {
   // 销毁
   destroy() {
     if (this._created) {
-      this._observer.stopObserve()
+      this._observerable.stopObserve()
       this.hooks = {
         onMount: [],
         onUnmount: [],

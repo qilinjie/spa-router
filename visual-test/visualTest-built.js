@@ -7,7 +7,7 @@
 $ = $ && $.hasOwnProperty('default') ? $['default'] : $;
 
 // 事件循环周期 单位毫秒
-const EVENT_LOOP_DURATION = 100;
+const EVENT_LOOP_DURATION = 50;
 const RESERVED_PROP_NAMES = ['__eventQueue', '__handlerQueue', '__intervalID', 'startObserve', 'stopObserve', 'onChange', '__observe__', '__scope__', '__get__', '__set__'];
 /** array 代理操作 */
 
@@ -580,7 +580,7 @@ class MVVM {
 
   destroy() {
     if (this._created) {
-      this._observer.stopObserve();
+      this._observerable.stopObserve();
 
       this.hooks = {
         onMount: [],
@@ -851,8 +851,6 @@ class Router {
         hash = '/';
       }
 
-      this._slot.unmount();
-
       const rules = Object.keys(this._config);
       let mounted = false;
 
@@ -923,14 +921,16 @@ class RouterSlot {
     this._mvvm = mvvm;
 
     this._mvvm.mount();
-  } // 取消挂载 mvvm
+  } // 取消挂载并销毁 mvvm
 
 
   unmount() {
     if (this._mounted) {
-      this._mvvm.$el().detach();
+      this._mvvm.$el().remove();
 
       this._mvvm.unmount();
+
+      this._mvvm.destroy();
 
       this._mvvm = null;
       this._mounted = false;
@@ -1080,34 +1080,40 @@ const loginMVVM = new MVVM(`
             <input sp-bind="username" type="text" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" placeholder="Enter username">
             <small id="emailHelp" class="form-text text-muted">We'll never share your email with anyone else.</small>
         </div>
-        <a  sp-click="onClick" href="" class="btn btn-primary">Submit</a>
+        <div class="form-group">
+            <textarea sp-bind="description" class="form-control"></textarea>
+        </div>        
+        <a sp-click="onClick" href="javascript:void(0)" class="btn btn-primary">Submit</a>
     </form>
 `, () => {
   return {
     username: 'salpadding',
+    description: '在此处输入描述信息',
 
     onClick(event) {
       event.preventDefault();
-      window.location.hash = `/info/${this.username}`;
+      window.location.hash = `/info/${this.username}/${this.description}`;
     }
 
   };
 });
 const infoMVVM = new MVVM(`
-    <div class="card" style="width: 18rem;">
-    <div class="card-body">
-        <h5 class="card-title" sp-text="username"></h5>
-        <h6 class="card-subtitle mb-2 text-muted">Card subtitle</h6>
-        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
-        <a id="logout" href="#/login" class="card-link">logout</a>
-    </div>
+    <div class="card" style="width: 18rem; margin:0 auto;">
+        <div class="card-body">
+            <h5 class="card-title" sp-text="username"></h5>
+            <h6 class="card-subtitle mb-2 text-muted">description</h6>
+            <p class="card-text" sp-text="description">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+            <a id="logout" href="#/login" class="card-link">logout</a>
+        </div>
     </div>
 `, () => {
   return {
     username: 'salpadding',
+    description: 'description',
 
     onCreate(restParams) {
       this.username = restParams.username || '';
+      this.description = restParams.description;
     }
 
   };
@@ -1116,7 +1122,7 @@ const app = SPA$1();
 app.use(Router$1({
   '/': loginMVVM,
   '/login': loginMVVM,
-  '/info/:username': infoMVVM
+  '/info/:username/:description': infoMVVM
 }));
 app.start();
 

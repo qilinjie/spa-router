@@ -1,5 +1,5 @@
 // 事件循环周期 单位毫秒
-const EVENT_LOOP_DURATION = 100
+const EVENT_LOOP_DURATION = 50
 const RESERVED_PROP_NAMES = ['__eventQueue', '__handlerQueue', '__intervalID', 'startObserve', 'stopObserve', 'onChange', '__observe__', '__scope__', '__get__', '__set__']
 /** array 代理操作 */
 const ARRAY_ORP = ['push', 'pop', 'shift', 'unshift', 'splice', 'sort', 'reverse']

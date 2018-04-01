@@ -16,7 +16,6 @@ export class Router {
       if (!hash) {
         hash = '/'
       }
-      this._slot.unmount()
       const rules = Object.keys(this._config)
       let mounted = false
       for (let i = 0; i < rules.length; i++) {
@@ -78,11 +77,12 @@ export class RouterSlot {
     this._mvvm = mvvm
     this._mvvm.mount()
   }
-  // 取消挂载 mvvm
+  // 取消挂载并销毁 mvvm
   unmount() {
     if (this._mounted) {
-      this._mvvm.$el().detach()
+      this._mvvm.$el().remove()
       this._mvvm.unmount()
+      this._mvvm.destroy()
       this._mvvm = null
       this._mounted = false
     }
