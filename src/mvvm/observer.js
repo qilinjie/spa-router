@@ -11,7 +11,7 @@ const PROP_KEY = `${PRIVATE_DATA_KEY}.__property__`
 const ARRAY_ORP = ['push', 'pop', 'shift', 'unshift', 'splice', 'sort', 'reverse']
 
 /**
- * Observer 实现了对象代理
+ * 没有采用事件系统的观察者
  */
 export default class Observer {
   constructor(data) {
@@ -24,10 +24,10 @@ export default class Observer {
     }
     Object.keys(data).forEach((prop) => {
       defineProperty(data, prop, data[prop])
-      if (typeof data[prop] === 'object' && !Array.isArray(data[prop])) {
+      if (typeof data[prop] === 'object') {
         Observer._observeObj(data[prop])
         // 嵌套的子对象的属性在发生变化时会通知父亲对象
-        data[prop][HANDLERS_KEY].addHandler(() => data[HANDLERS_KEY].notify(prop))
+        data[prop][HANDLERS_KEY].addHandler((childprop) => data[HANDLERS_KEY].notify(`${prop}.${childprop}`))
       }
       // array 操作也会通知
       if (Array.isArray(data[prop])) {
@@ -51,6 +51,37 @@ export default class Observer {
   }
   data() {
     return this._data
+  }
+  /**
+   * @param {string} key parentkey.childkey 形式
+   * @returns {any} value
+   */
+  get(key) {
+    const keys = key.split('.')
+    const ctxkeys = keys.slice(0, keys.length - 1)
+    let ctx = this._data
+    ctxkeys.forEach(
+      (x) => {
+        ctx = ctx[x]
+      }
+    )
+    return ctx[keys[keys.length - 1]]
+  }
+  /**
+   * @param {string} key parentkey.childkey 形式
+   * @param {any}  value 值
+   * @returns {undefined}
+   */
+  set(key, value) {
+    const keys = key.split('.')
+    const ctxkeys = keys.slice(0, keys.length - 1)
+    let ctx = this._data
+    ctxkeys.forEach(
+      (x) => {
+        ctx = ctx[x]
+      }
+    )
+    ctx[keys[keys.length - 1]] = value
   }
 }
 

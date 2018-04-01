@@ -45,7 +45,7 @@ const PROP_KEY = `${PRIVATE_DATA_KEY}.__property__`;
 
 const ARRAY_ORP = ['push', 'pop', 'shift', 'unshift', 'splice', 'sort', 'reverse'];
 /**
- * Observer 实现了对象代理
+ * Observer 实现了对象的深度观察
  */
 
 class Observer {
@@ -63,11 +63,11 @@ class Observer {
     Object.keys(data).forEach(prop => {
       defineProperty(data, prop, data[prop]);
 
-      if (typeof data[prop] === 'object' && !Array.isArray(data[prop])) {
+      if (typeof data[prop] === 'object') {
         Observer._observeObj(data[prop]); // 嵌套的子对象的属性在发生变化时会通知父亲对象
 
 
-        data[prop][HANDLERS_KEY].addHandler(() => data[HANDLERS_KEY].notify(prop));
+        data[prop][HANDLERS_KEY].addHandler(childprop => data[HANDLERS_KEY].notify(`${prop}.${childprop}`));
       } // array 操作也会通知
 
 
@@ -96,6 +96,37 @@ class Observer {
 
   data() {
     return this._data;
+  }
+  /**
+   * @param {string} key parentkey.childkey 形式
+   * @returns {any} value
+   */
+
+
+  get(key) {
+    const keys = key.split('.');
+    const ctxkeys = keys.slice(0, keys.length - 1);
+    let ctx = this._data;
+    ctxkeys.forEach(x => {
+      ctx = ctx[x];
+    });
+    return ctx[keys[keys.length - 1]];
+  }
+  /**
+   * @param {string} key parentkey.childkey 形式
+   * @param {any}  value 值
+   * @returns {undefined}
+   */
+
+
+  set(key, value) {
+    const keys = key.split('.');
+    const ctxkeys = keys.slice(0, keys.length - 1);
+    let ctx = this._data;
+    ctxkeys.forEach(x => {
+      ctx = ctx[x];
+    });
+    ctx[keys[keys.length - 1]] = value;
   }
 
 }
@@ -138,6 +169,130 @@ function defineProperty(obj, prop, val) {
     }
 
   });
+}
+
+const PREFIX = 'sp-';
+class Directive {
+  constructor(raw, scope) {
+    this._scope = scope;
+    this._raw = raw;
+  }
+
+  bind() {
+    return null;
+  }
+
+  update() {
+    return null;
+  }
+
+} // sp-text 指令 后续需要加入 XSS 防范
+
+class TextDirective extends Directive {
+  static New(raw, scope) {
+    return new TextDirective(raw, scope);
+  }
+  /**
+   * 同步数据模型到视图的单向绑定
+   * @param {Observer} observable 可观察的对象
+   * @returns {undefined}
+   */
+
+
+  bind(observable) {
+    this._scope.el.innerHTML = observable.get(this._raw);
+    observable.onChange(key => {
+      if (key === this._raw) {
+        this._scope.el.innerHTML = observable.get(key);
+      }
+    });
+  }
+
+} // sp-bind 指令
+
+class InputBindDirective extends Directive {
+  static New(raw, scope) {
+    return new InputBindDirective(raw, scope);
+  }
+  /**
+   * 表单到模型的双向绑定
+   * @param {Observer} observable 可观察的对象
+   * @returns {undefined}
+   */
+
+
+  bind(observable) {
+    this._scope.el.value = observable.get(this._raw);
+    observable.onChange(key => {
+      if (key === this._raw) {
+        this._scope.el.value = observable.get(key);
+      }
+    });
+
+    this._scope.el.addEventListener('input', () => {
+      observable.set(this._raw, this._scope.el.value);
+    });
+  }
+
+}
+/**
+ * 索引
+ */
+
+const DIRECTIVES = {
+  bind: InputBindDirective,
+  text: TextDirective
+};
+
+const DIRECTIVE_PATTERN = new RegExp(`${PREFIX}(\\w+)`);
+/**
+ * @param {HTMLElement} element 文档节点
+ * @param {Observer} observerable 绑定到的数据模型
+ * @returns {undefined}
+ */
+
+function compileTemplate(element, observerable) {
+  if (element.children && element.children.length > 0) {
+    Array.from(element.children).forEach(el => {
+      parseElement(el, observerable);
+      compileTemplate(el, observerable);
+    });
+  }
+}
+/**
+ * 解析指令
+ * @param {HTMLElement} el 需要解析的文档节点
+ * @param {Object} observerable 数据模型
+ * @returns {undefined}
+ */
+
+function parseElement(el, observerable) {
+  const attributes = Array.from(el.attributes) || [];
+  const scope = {
+    parentNode: el.parentElement,
+    nextNode: el.nextElementSibling,
+    el
+  };
+  attributes.forEach(attr => {
+    const raw = attr.value;
+    const directiveName = isDirecitve(attr.name);
+    const directiveType = directiveName && DIRECTIVES[directiveName];
+
+    if (directiveName && directiveType) {
+      const directive = directiveType.New(raw, scope);
+      directive.bind(observerable);
+    }
+  });
+}
+/**
+ * @param {string} attr 指令
+ * @returns {string} 匹配到的字符
+ */
+
+
+function isDirecitve(attr) {
+  const matchResult = attr.match(DIRECTIVE_PATTERN);
+  return matchResult && matchResult[1] || '';
 }
 
 describe('observer', function () {
@@ -190,7 +345,7 @@ describe('observer', function () {
     });
     let data = o.data();
     o.onChange(function (prop) {
-      if (prop === 'o') {
+      if (prop === 'o.key') {
         changed = true;
       }
     });
@@ -212,6 +367,77 @@ describe('observer', function () {
     data.users.push('val.');
     expect(data.users.push === Array.prototype.push).toBe(false);
     expect(changed).toBe(true);
+  });
+  it('get value', function () {
+    let o = new Observer({
+      key1: {
+        key2: {
+          key3: '3'
+        }
+      }
+    });
+    expect(o.get('key1.key2.key3')).toBe('3');
+    expect(o.get('key1.key2.key3')).toBe(o.data().key1.key2.key3);
+  });
+  it('set value', function () {
+    let o = new Observer({
+      key1: {
+        key2: {
+          key3: '3'
+        }
+      }
+    });
+    o.set('key1.key2.key3', 4);
+    expect(o.get('key1.key2.key3')).toBe(4);
+  });
+}); // 指令绑定单元测试
+
+describe('directive', function () {
+  it('text directive', function () {
+    let el = document.createElement('div');
+    let textdirective = new TextDirective('key1.key2', {
+      el: el
+    });
+    let o = new Observer({
+      key1: {
+        key2: 'key2'
+      }
+    });
+    textdirective.bind(o);
+    expect(el.innerHTML).toBe('key2');
+    o.data().key1.key2 = 'key3';
+    expect(el.innerHTML).toBe('key3');
+  });
+  it('input directive', function () {
+    let el = document.createElement('input');
+    el.setAttribute('type', 'text');
+    document.body.appendChild(el);
+    let inputdirective = new InputBindDirective('key1.key2', {
+      el: el
+    });
+    let o = new Observer({
+      key1: {
+        key2: 'key2'
+      }
+    });
+    inputdirective.bind(o);
+    expect(el.value).toBe('key2');
+    o.data().key1.key2 = 'key3';
+    expect(el.value).toBe('key3');
+  });
+  it('composite directive', function () {
+    let el = document.createElement('div');
+    el.innerHTML = `
+            <input type="text" sp-bind="username">
+            <h1 sp-text="username"></h1>
+        `;
+    let o = new Observer({
+      username: 'salpadding'
+    });
+    document.body.appendChild(el);
+    compileTemplate(el, o);
+    expect(el.querySelector('input').value).toBe('salpadding');
+    expect(el.querySelector('h1').innerHTML).toBe('salpadding');
   });
 });
 

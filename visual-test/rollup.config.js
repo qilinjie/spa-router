@@ -4,8 +4,8 @@ const path = require('path')
 const babel = require('rollup-plugin-babel')
 const resolve = require('rollup-plugin-node-resolve')
 
-const fileDest = 'unitTest-built.js'
-const fileSrc = 'unitTest.js'
+const fileDest = 'visualTest-built.js'
+const fileSrc = 'visualTest.js'
 
 const plugins = [
     babel({
@@ -20,12 +20,18 @@ const plugins = [
     , resolve() // bundle
 ]
 
+const external = ['jquery']
+const globals = {
+    jquery : 'jQuery'
+}
 module.exports = {
     input: path.resolve(__dirname, fileSrc),
     output: {
         file: path.resolve(__dirname, fileDest),
         format: 'umd',
-        name: 'spa'
+        name: 'spa',
+        globals
     },
-    plugins
+    plugins,
+    external
 }

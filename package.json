@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "js-compile-unit-test-watch": "rollup --config unit-test/rollup.config.js --sourcemap --watch",
-    "test": "node_modules/.bin/karma start unit-test/karma.conf.js"
+    "test": "node_modules/.bin/karma start unit-test/karma.conf.js",
+    "js-compile-visual-test-watch": "rollup --config visual-test/rollup.config.js --sourcemap --watch"
   },
   "repository": {
     "type": "git",
