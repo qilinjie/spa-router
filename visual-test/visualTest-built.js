@@ -1099,9 +1099,7 @@ const infoMVVM = new MVVM(`
         <h5 class="card-title" sp-text="username"></h5>
         <h6 class="card-subtitle mb-2 text-muted">Card subtitle</h6>
         <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
-        <a href="#" v-click="onClick" class="card-link">修改用户名</a>
         <a id="logout" href="#/login" class="card-link">logout</a>
-        <input sp-bind="username" type="text">
     </div>
     </div>
 `, () => {
@@ -1110,10 +1108,6 @@ const infoMVVM = new MVVM(`
 
     onCreate(restParams) {
       this.username = restParams.username || '';
-    },
-
-    onClick(event) {
-      event.preventDefault();
     }
 
   };
